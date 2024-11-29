@@ -274,6 +274,23 @@ db.videojuegos.deleteMany({ rating: { $lt: 8.0 } })
 // 5.Elimina todos los videojuegos que sean del género "MOBA".
 db.videojuegos.deleteMany({ genre: "MOBA" })
 // 6.Elimina el campo de género de todos los videojuegos que tengan un rating inferior a 8.0.
-
+db.videojuegos.updateMany({ rating: { $lt: 8.0 } }, { $unset: { genre: 1 } })
 // 7.Elimina todos los videojuegos lanzados antes de 2010.
+db.videojuegos.deleteMany({ releaseYear: { $lt: 2010 } })
 // 8.Elimina el videojuego con el menor número de plataformas
+
+//----------------------------------------------------------------------------------------------------------------------------------------------
+
+// Problema 5: indexación
+// 1.Crea un índice de texto en el campo "title".
+db.videojuegos.createIndex({ title: 1 })
+// 2.Crea un índice compuesto en los campos "genre" y "rating".
+db.videojuegos.createIndex({ genre: 1, rating: 1 })
+// 3.Crea un índice descendente en el campo "title" y ascendente en el campo "releaseYear"
+db.videojuegos.createIndex({ title: -1, releaseYear: 1 })
+// 4.Crea un índice de texto en el campo "platform".
+db.videojuegos.createIndex({ platform: "text" })
+
+//----------------------------------------------------------------------------------------------------------------------------------------------
+
+// Problema 6: relaciones

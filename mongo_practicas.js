@@ -212,7 +212,6 @@ db.videojuegos.find({ "rating": { $gt: 9.0 } }).sort({ "releaseYear": -1 })
 // 4.Encuentra todos los videojuegos que tengan una calificación mayor a 8.7 y que pertenezcan al género "Adventure".
 db.videojuegos.find({ $and: [{ "rating": { $gt: 8.7 } }, { "genre": "Adventure" }] })
 // 5.Encuentra el videojuego con el título más largo en la colección
-
 // 6.Encuentra todos los videojuegos lanzados en o después de 2017
 db.videojuegos.find({ "releaseYear": { $gte: 2017 } })
 // 7.Encuentra dos videojuegos cuyo título comience con la letra "T"
@@ -231,7 +230,7 @@ db.videojuegos.updateOne({ title: "The Witcher 3: Wild Hunt" }, { $addToSet: { g
 db.videojuegos.find(
     {
         $and: [
-            { platform: { $not: { $size: 1 } } },
+            { $expr: { $gt: [{ $size: "$platform" }, 1] } },
             { rating: { $gte: 9 } }
         ]
     }
@@ -271,6 +270,9 @@ db.videojuegos.updateOne({ title: "Dark Souls III" }, { $unset: { rating: 1 } })
 // 3.Elimina todos los videojuegos que tengan un rating inferior a 8.0.
 db.videojuegos.deleteMany({ rating: { $lt: 8.0 } })
 // 4.Elimina todos los videojuegos que tengan menos de 3 plataformas.
+db.videojuegos.deleteMany({
+    $expr: { $lt: [{ $size: "$platform" }, 3] }
+})
 // 5.Elimina todos los videojuegos que sean del género "MOBA".
 db.videojuegos.deleteMany({ genre: "MOBA" })
 // 6.Elimina el campo de género de todos los videojuegos que tengan un rating inferior a 8.0.

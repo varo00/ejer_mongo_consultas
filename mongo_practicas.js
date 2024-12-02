@@ -311,3 +311,8 @@ db.comments.aggregate([{$match: {username: "SuperCoder123"}}])
 // 7.Encuentra todos los comentarios escritos por "TechGuru99".
 db.comments.aggregate([{$match: {username: "TechGuru99"}}])
 // 8.Encuentra todos los comentarios pertenecientes a la publicación “Shares coding tutorials"
+db.comments.aggregate([
+    { $lookup: { from:"posts", localField:"post", foreignField:"_id", as:"post_info" } },
+    { $unwind: "$post_info" },
+    { $match: { "post_info.title":"Shares coding tutorials" } }
+])

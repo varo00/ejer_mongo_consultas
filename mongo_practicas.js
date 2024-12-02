@@ -296,3 +296,18 @@ db.videojuegos.createIndex({ platform: "text" })
 //----------------------------------------------------------------------------------------------------------------------------------------------
 
 // Problema 6: relaciones
+// 1.Encuentra todos los usuarios.
+db.users.find()
+// 2.Encuentra todas las publicaciones.
+db.posts.find()
+// 3.Encuentra todas las publicaciones escritas por "SuperCoder123".
+db.posts.aggregate([{$match: {username: "SuperCoder123"}}])
+// 4.Encuentra todas las publicaciones escritas por "TechGuru99".
+db.posts.aggregate([{$match: {username: "TechGuru99"}}])
+// 5.Encuentra todos los comentarios.
+db.comments.find()
+// 6.Encuentra todos los comentarios escritos por "SuperCoder123".
+db.comments.aggregate([{$match: {username: "SuperCoder123"}}])
+// 7.Encuentra todos los comentarios escritos por "TechGuru99".
+db.comments.aggregate([{$match: {username: "TechGuru99"}}])
+// 8.Encuentra todos los comentarios pertenecientes a la publicación “Shares coding tutorials"

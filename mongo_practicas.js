@@ -477,23 +477,186 @@ db.videojuegos.find({ genre: "Adventure", rating: { $gt: 9 } }).explain("executi
 
 // Problema 10: Relaciones complejas
 // 1.Inserta una nueva compra para un usuario existente.
+db.users.updateOne(
+    { username:"TechGuru99" },
+    { $push: { purchases: { title:"Minecraft", date:new Date(), price:25.66 } } }
+)
 // 2.Encuentra todos los usuarios que han realizado compras.
+db.users.find(
+    { purchases: { $exists: true, $not: { $size: 0 } } }
+)  
 // 3.Actualiza el historial de compras de un usuario para incluir un nuevo videojuego.
+db.users.updateOne(
+    { username: "SuperCoder123" },
+    { $push: { purchases: { title:"Super Mario Odyssey", date:new Date(), price:59.99 } } }
+)
 // 4.Inserta más comentarios relacionados con los posts de los usuarios.
+db.comments.insertMany([
+    {
+      username: "TechGuru99",
+      comment: "This is a groundbreaking discovery!",
+      post: db.posts.findOne({title:"Solves a coding challenge"})._id
+    },
+    {
+      username: "SuperCoder123",
+      comment: "Really insightful and well explained.",
+      post: db.posts.findOne({title:"Shares coding tutorials"})._id
+    },
+    {
+      username: "TechGuru99",
+      comment: "Can't wait to try this out.",
+      post: db.posts.findOne({title:"Shares coding tutorials"})._id
+    }
+])  
 // 5.Encuentra todos los comentarios realizados por un usuario específico.
+db.comments.find({ username: "SuperCoder123" }).pretty()
 // 6.Cuenta el número total de comentarios por usuario.
+db.comments.aggregate([
+    {
+      $group: {
+        _id: "$username",
+        totalComments: { $sum: 1 }
+      }
+    },
+    { $sort: { totalComments: -1 } }
+])
 // 7.Encuentra todas las publicaciones con sus respectivos comentarios.
+db.posts.aggregate([
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "post",
+        as: "comments"
+      }
+    },
+    {
+      $project: {
+        title: 1,
+        body: 1,
+        comments: {
+          $map: {
+            input: "$comments",
+            as: "comment",
+            in: {
+              username: "$$comment.username",
+              comment: "$$comment.comment"
+            }
+          }
+        }
+      }
+    }
+])  
 // 8.Encuentra las publicaciones con más de dos comentarios.
+db.posts.aggregate([
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "post",
+        as: "comments"
+      }
+    },
+    {
+      $match: {
+        $expr: { $gt: [{ $size: "$comments" }, 2] }
+      }
+    },
+    {
+      $project: {
+        title: 1,
+        body: 1,
+        commentsCount: { $size: "$comments" }
+      }
+    }
+  ])  
 // 9.Ordena las publicaciones por el número de comentarios de forma descendente.
+db.posts.aggregate([
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "post",
+        as: "comments"
+      }
+    },
+    {
+      $addFields: {
+        commentsCount: { $size: "$comments" }
+      }
+    },
+    {
+      $sort: { commentsCount: -1 }
+    },
+    {
+      $project: {
+        title: 1,
+        body: 1,
+        commentsCount: 1
+      }
+    }
+])  
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
 
 // Problema 11: Persistencia
 // 1.Persiste los resultados de videojuegos agrupados por género en una nueva colección llamada `genre_analysis`.
+db.videojuegos.aggregate([
+    {
+      $unwind: "$genre"
+    },
+    {
+      $group: {
+        _id: "$genre",
+        averageRating: { $avg: "$rating" },
+        totalGames: { $sum: 1 },
+      }
+    },
+    {
+      $out: "genre_analysis" // nueva colección
+    }
+])
 // 2.Añade también el campo de género con el número de plataformas promedio por género.
+db.series.aggregate([
+    { 
+      $unwind: "$genre" 
+    },
+    {
+      $group: {
+        _id: "$genre",
+        averageRating: { $avg: "$rating" },
+        totalGames: { $sum: 1 },
+        averagePlatforms: { 
+          $avg: { $size: "$platform" }
+        }
+      }
+    },
+    { 
+      $out: "genre_analysis"
+    }
+  ])  
 // 3.Encuentra los géneros que tienen más de cinco videojuegos y persiste solo esos resultados.
+db.series.aggregate([
+    { 
+      $unwind: "$genre"
+    },
+    {
+      $group: {
+        _id: "$genre",
+        totalGames: { $sum: 1 }
+      }
+    },
+    {
+      $match: {
+        totalGames: { $gt: 5 }
+      }
+    },
+    { 
+      $out: "genre_analysis"
+    }
+])  
 // 4.Exporta la colección `users` en formato JSON.
-// 5.Exporta también la colección `series` en formato JSON.
+// 5.Exporta también la colección `videojuegos` en formato JSON.
 // 6.Genera un archivo JSON con los videojuegos que tienen calificación superior a 9.0.
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
@@ -503,5 +666,99 @@ db.videojuegos.find({ genre: "Adventure", rating: { $gt: 9 } }).explain("executi
 // 2.Divide las consultas en secciones según el problema que resuelven.
 // 3.Incluye comentarios en cada consulta explicando su propósito.
 // 4.Crea una función en JavaScript que permita buscar videojuegos según condiciones específicas pasadas como parámetro.
+// Función para buscar videojuegos según condiciones específicas
+const {MongoClient} = require('mongodb');
+
+const url = "mongodb://root:example@localhost:27017/?appName=MongoDB+Compass&directConnection=true&serverSelectionTimeoutMS=2000"
+const dbName = "mongo_practica"
+
+async function buscarVideojuegos(conditions) {
+    const client = new MongoClient(url);
+
+    try {
+        await client.connect();
+        console.log("Conexión exitosa a MongoDB");
+
+        const db = client.db(dbName);
+        const collection = db.collection('videojuegos');
+
+        const result = await collection.find(conditions).toArray();
+
+        return result
+
+    } catch (error) {
+        console.error(error);
+    }finally{
+        await client.close();
+    }
+
+}
+
+const videojuegos = buscarVideojuegos({
+    rating: { $gt: 9.0 }
+});
+
+videojuegos.then(v => {
+    console.log(v)
+});
 // 5.Extiende la función para incluir un parámetro opcional que ordene los resultados.
+async function buscarVideojuegosOrdenados(conditions, sort={}) {
+    const client = new MongoClient(url);
+
+    try {
+        await client.connect();
+        console.log("Conexión exitosa a MongoDB");
+
+        const db = client.db(dbName);
+        const collection = db.collection('videojuegos');
+
+        const result = await collection.find(conditions).sort(sort).toArray();
+
+        return result
+
+    } catch (error) {
+        console.error(error);
+    }finally{
+        await client.close();
+    }
+
+}
+
+const videojuegosOrdenados = buscarVideojuegosOrdenados(
+    {rating: { $gt: 9.0 }},
+    {rating:-1}
+);
+
+videojuegosOrdenados.then(v => {
+    console.log(v)
+});
 // 6.Agrega un límite de resultados en la función para devolver solo los primeros `n` documentos encontrados.
+async function buscarVideojuegosOrdenadosLimit(conditions, sort={}, l=1) {
+    const client = new MongoClient(url);
+
+    try {
+        await client.connect();
+        console.log("Conexión exitosa a MongoDB");
+
+        const db = client.db(dbName);
+        const collection = db.collection('videojuegos');
+
+        const result = await collection.find(conditions).sort(sort).limit(l).toArray();
+
+        return result
+
+    } catch (error) {
+        console.error(error);
+    }finally{
+        await client.close();
+    }
+}
+const videojuegosOrdenadosLimit = buscarVideojuegosOrdenadosLimit(
+    {rating: { $gt: 9.0 }},
+    {rating:-1},
+    2
+);
+
+videojuegosOrdenadosLimit.then(v => {
+    console.log(v)
+});

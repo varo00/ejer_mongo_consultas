@@ -344,23 +344,31 @@ db.videojuegos.find({
     ]
 }).sort({ releaseYear: -1 })
 // 2.Encuentra todos los videojuegos con más de dos géneros.
-// Filtra los videojuegos que tengan más de tres plataformas.
-// Encuentra el videojuego con más géneros en su lista.
 db.videojuegos.aggregate([
     { $unwind: "$genre" },
     { $group: { _id: "$title", genres: { $addToSet: "$genre" } } },
     { $match: { $expr: { $gt: [{ $size: "$genres" }, 2] } } }
 ])
-// 3.Encuentra videojuegos cuya plataforma incluye 'PlayStation' y 'PC'.
-// Encuentra videojuegos que tengan exactamente estas dos plataformas.
-// Ordena los resultados por calificación en orden descendente.
+// Filtra los videojuegos que tengan más de tres plataformas.
 db.videojuegos.aggregate([
-    { $match: { platform: { $all: ["PlayStation", "PC"] } } },
     { $unwind: "$platform" },
-    { $group: { _id: "$_id", platforms: { $addToSet: "$platform" }, rating: { $first: "$rating" } } },
-    { $match: { $expr: { $eq: [{ $size: "$platforms" }, 2] } } },
-    { $sort: { rating: -1 } }
+    { $group: { _id: "$_id", platforms: { $addToSet: "$platform" } } },
+    { $match: { $expr: { $gt: [{ $size: "$platforms" }, 3] } } }
 ])
+// Encuentra el videojuego con más géneros en su lista.
+db.videojuegos.aggregate([
+    { $unwind: "$genre" },
+    { $group: { _id: "$title", genres: { $addToSet: "$genre" } } },
+    { $addFields: { genreCount: { $size: "$genres" } } },
+    { $sort: { genreCount: -1 } },
+    { $limit: 1 }
+])
+// 3.Encuentra videojuegos cuya plataforma incluye 'PlayStation' y 'PC'.
+db.videojuegos.find({ platform: { $in: ["PlayStation", "PC"] } })
+// Encuentra videojuegos que tengan exactamente estas dos plataformas.
+db.videojuegos.find({ platform: { $all: ["PlayStation", "PC"] } })
+// Ordena los resultados por calificación en orden descendente.
+db.videojuegos.find({ platform: { $all: ["PlayStation", "PC"] } }).sort({ rating: -1 })
 // 4.Encuentra videojuegos lanzados después de 2015 que sean de género 'Action' o 'RPG'.
 // Encuentra cuántos videojuegos cumplen esta condición.
 db.videojuegos.find({
@@ -409,8 +417,7 @@ db.videojuegos.aggregate([
     { $group: { _id: "$platform", totalIngresos: { $sum: { $multiply: ["$rating", 1000] } } } },
     { $sort: { totalIngresos: -1 } },
     { $limit: 1 }
-])
-// 6.Calcula también el promedio de ingresos por plataforma.
+])// 6.Calcula también el promedio de ingresos por plataforma.
 db.videojuegos.aggregate([
     { $unwind: "$platform" },
     { $group: { _id: "$platform", avgIngresos: { $avg: { $multiply: ["$rating", 1000] } } } },

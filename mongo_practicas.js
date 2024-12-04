@@ -405,13 +405,14 @@ db.videojuegos.aggregate([
 ])
 // 4.Supón que cada videojuego se vende 1,000 veces. Calcula el ingreso total por plataforma.
 db.videojuegos.aggregate([
-  { $unwind: "$platform" },
-  { $group: {
-          _id: "$platform",
-          totalIncome: { $sum: { $multiply: [1000, 25] } } // doy un precio de 25 por juego
-      }
-  },
-  { $sort: { totalIncome: -1 } }
+    { $unwind: "$platform" },
+    {
+        $group: {
+            _id: "$platform",
+            totalIncome: { $sum: { $multiply: [1000, 25] } } // doy un precio de 25 por juego
+        }
+    },
+    { $sort: { totalIncome: -1 } }
 ])
 // 5.Encuentra la plataforma que genera los mayores ingresos.
 db.videojuegos.aggregate([
@@ -428,55 +429,61 @@ db.videojuegos.aggregate([
 ])
 // 7.Combina las colecciones `videojuegos` y `users` para encontrar los nombres de usuarios que compraron juegos de género 'RPG'.
 db.users.aggregate([
-  { $lookup: {
-      from: "videojuegos",
-      localField: "purchases.title",
-      foreignField: "title",
-      as: "purchasedGames"
+    {
+        $lookup: {
+            from: "videojuegos",
+            localField: "purchases.title",
+            foreignField: "title",
+            as: "purchasedGames"
+        }
+    },
+    { $unwind: "$purchasedGames" },
+    { $match: { "purchasedGames.genre": "RPG" } },
+    {
+        $project: {
+            username: 1,
+            "purchasedGames.title": 1,
+            _id: 0
+        }
     }
-  },
-  { $unwind: "$purchasedGames" },
-  { $match: { "purchasedGames.genre": "RPG" } },
-  { $project: {
-      username: 1,
-      "purchasedGames.title": 1,
-      _id: 0
-    }
-  }
 ])
 // 8.Encuentra también los usuarios que compraron videojuegos con calificación mayor a 9.0.
 db.users.aggregate([
-  { $lookup: {
-      from: "videojuegos",
-      localField: "purchases.title",
-      foreignField: "title",
-      as: "purchasedGames"
+    {
+        $lookup: {
+            from: "videojuegos",
+            localField: "purchases.title",
+            foreignField: "title",
+            as: "purchasedGames"
+        }
+    },
+    { $unwind: "$purchasedGames" },
+    { $match: { "purchasedGames.rating": { $gt: 9 } } },
+    {
+        $project: {
+            username: 1,
+            "purchasedGames.title": 1,
+            _id: 0
+        }
     }
-  },
-  { $unwind: "$purchasedGames" },
-  { $match: { "purchasedGames.rating": { $gt:9 } } },
-  { $project: {
-      username: 1,
-      "purchasedGames.title": 1,
-      _id: 0
-    }
-  }
 ])
 // 9.Genera un listado de usuarios con los títulos de los videojuegos que han comprado.
 db.users.aggregate([
-  { $lookup: {
-      from: "videojuegos",
-      localField: "purchases.title",
-      foreignField: "title",
-      as: "purchasedGames"
+    {
+        $lookup: {
+            from: "videojuegos",
+            localField: "purchases.title",
+            foreignField: "title",
+            as: "purchasedGames"
+        }
+    },
+    {
+        $project: {
+            username: 1,
+            "purchasedGames.title": 1,
+            _id: 0
+        }
     }
-  },
-  { $project: {
-      username: 1,
-      "purchasedGames.title": 1,
-      _id: 0
-    }
-  }
 ])
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
@@ -513,124 +520,124 @@ db.videojuegos.find({ genre: "Adventure", rating: { $gt: 9 } }).explain("executi
 // Problema 10: Relaciones complejas
 // 1.Inserta una nueva compra para un usuario existente.
 db.users.updateOne(
-    { username:"TechGuru99" },
-    { $push: { purchases: { title:"Minecraft", date:new Date()} } }
+    { username: "TechGuru99" },
+    { $push: { purchases: { title: "Minecraft", date: new Date() } } }
 )
 // 2.Encuentra todos los usuarios que han realizado compras.
 db.users.find(
     { purchases: { $exists: true, $not: { $size: 0 } } }
-)  
+)
 // 3.Actualiza el historial de compras de un usuario para incluir un nuevo videojuego.
 db.users.updateOne(
     { username: "SuperCoder123" },
-    { $push: { purchases: { title:"Super Mario Odyssey", date:new Date()} } }
+    { $push: { purchases: { title: "Super Mario Odyssey", date: new Date() } } }
 )
 // 4.Inserta más comentarios relacionados con los posts de los usuarios.
 db.comments.insertMany([
     {
-      username: "TechGuru99",
-      comment: "This is a groundbreaking discovery!",
-      post: db.posts.findOne({title:"Solves a coding challenge"})._id
+        username: "TechGuru99",
+        comment: "This is a groundbreaking discovery!",
+        post: db.posts.findOne({ title: "Solves a coding challenge" })._id
     },
     {
-      username: "SuperCoder123",
-      comment: "Really insightful and well explained.",
-      post: db.posts.findOne({title:"Shares coding tutorials"})._id
+        username: "SuperCoder123",
+        comment: "Really insightful and well explained.",
+        post: db.posts.findOne({ title: "Shares coding tutorials" })._id
     },
     {
-      username: "TechGuru99",
-      comment: "Can't wait to try this out.",
-      post: db.posts.findOne({title:"Shares coding tutorials"})._id
+        username: "TechGuru99",
+        comment: "Can't wait to try this out.",
+        post: db.posts.findOne({ title: "Shares coding tutorials" })._id
     }
-])  
+])
 // 5.Encuentra todos los comentarios realizados por un usuario específico.
 db.comments.find({ username: "SuperCoder123" }).pretty()
 // 6.Cuenta el número total de comentarios por usuario.
 db.comments.aggregate([
     {
-      $group: {
-        _id: "$username",
-        totalComments: { $sum: 1 }
-      }
+        $group: {
+            _id: "$username",
+            totalComments: { $sum: 1 }
+        }
     },
     { $sort: { totalComments: -1 } }
 ])
 // 7.Encuentra todas las publicaciones con sus respectivos comentarios.
 db.posts.aggregate([
     {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "post",
-        as: "comments"
-      }
+        $lookup: {
+            from: "comments",
+            localField: "_id",
+            foreignField: "post",
+            as: "comments"
+        }
     },
     {
-      $project: {
-        title: 1,
-        body: 1,
-        comments: {
-          $map: {
-            input: "$comments",
-            as: "comment",
-            in: {
-              username: "$$comment.username",
-              comment: "$$comment.comment"
+        $project: {
+            title: 1,
+            body: 1,
+            comments: {
+                $map: {
+                    input: "$comments",
+                    as: "comment",
+                    in: {
+                        username: "$$comment.username",
+                        comment: "$$comment.comment"
+                    }
+                }
             }
-          }
         }
-      }
     }
-])  
+])
 // 8.Encuentra las publicaciones con más de dos comentarios.
 db.posts.aggregate([
     {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "post",
-        as: "comments"
-      }
+        $lookup: {
+            from: "comments",
+            localField: "_id",
+            foreignField: "post",
+            as: "comments"
+        }
     },
     {
-      $match: {
-        $expr: { $gt: [{ $size: "$comments" }, 2] }
-      }
+        $match: {
+            $expr: { $gt: [{ $size: "$comments" }, 2] }
+        }
     },
     {
-      $project: {
-        title: 1,
-        body: 1,
-        commentsCount: { $size: "$comments" }
-      }
+        $project: {
+            title: 1,
+            body: 1,
+            commentsCount: { $size: "$comments" }
+        }
     }
-  ])  
+])
 // 9.Ordena las publicaciones por el número de comentarios de forma descendente.
 db.posts.aggregate([
     {
-      $lookup: {
-        from: "comments",
-        localField: "_id",
-        foreignField: "post",
-        as: "comments"
-      }
+        $lookup: {
+            from: "comments",
+            localField: "_id",
+            foreignField: "post",
+            as: "comments"
+        }
     },
     {
-      $addFields: {
-        commentsCount: { $size: "$comments" }
-      }
+        $addFields: {
+            commentsCount: { $size: "$comments" }
+        }
     },
     {
-      $sort: { commentsCount: -1 }
+        $sort: { commentsCount: -1 }
     },
     {
-      $project: {
-        title: 1,
-        body: 1,
-        commentsCount: 1
-      }
+        $project: {
+            title: 1,
+            body: 1,
+            commentsCount: 1
+        }
     }
-])  
+])
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -638,64 +645,64 @@ db.posts.aggregate([
 // 1.Persiste los resultados de videojuegos agrupados por género en una nueva colección llamada `genre_analysis`.
 db.videojuegos.aggregate([
     {
-      $unwind: "$genre"
+        $unwind: "$genre"
     },
     {
-      $group: {
-        _id: "$genre",
-        averageRating: { $avg: "$rating" },
-        totalGames: { $sum: 1 },
-      }
+        $group: {
+            _id: "$genre",
+            averageRating: { $avg: "$rating" },
+            totalGames: { $sum: 1 },
+        }
     },
     {
-      $out: "genre_analysis" // nueva colección
+        $out: "genre_analysis" // nueva colección
     }
 ])
 // 2.Añade también el campo de género con el número de plataformas promedio por género.
 db.videojuegos.aggregate([
-    { 
-      $unwind: "$genre" 
+    {
+        $unwind: "$genre"
     },
     {
-      $group: {
-        _id: "$genre",
-        averageRating: { $avg: "$rating" },
-        totalGames: { $sum: 1 },
-        averagePlatforms: { 
-          $avg: { $size: "$platform" }
+        $group: {
+            _id: "$genre",
+            averageRating: { $avg: "$rating" },
+            totalGames: { $sum: 1 },
+            averagePlatforms: {
+                $avg: { $size: "$platform" }
+            }
         }
-      }
     },
-    { 
-      $out: "genre_analysis"
+    {
+        $out: "genre_analysis"
     }
-  ])  
+])
 // 3.Encuentra los géneros que tienen más de cinco videojuegos y persiste solo esos resultados.
 db.videojuegos.aggregate([
-    { 
-      $unwind: "$genre"
+    {
+        $unwind: "$genre"
     },
     {
-      $group: {
-        _id: "$genre",
-        totalGames: { $sum: 1 }
-      }
+        $group: {
+            _id: "$genre",
+            totalGames: { $sum: 1 }
+        }
     },
     {
-      $match: {
-        totalGames: { $gt: 5 }
-      }
+        $match: {
+            totalGames: { $gt: 5 }
+        }
     },
-    { 
-      $out: "genre_analysis"
+    {
+        $out: "genre_analysis"
     }
-])  
+])
 // 4.Exporta la colección `users` en formato JSON.
-mongoexport --db=mongo_practica --collection=users --out=users_export.json --jsonArray
+mongoexport--db = mongo_practica--collection = users--out = users_export.json--jsonArray
 // 5.Exporta también la colección `videojuegos` en formato JSON.
-mongoexport --db=mongo_practica --collection=videojuegos --out=users_export.json --jsonArray
+mongoexport--db = mongo_practica--collection = videojuegos--out = users_export.json--jsonArray
 // 6.Genera un archivo JSON con los videojuegos que tienen calificación superior a 9.0.
-mongoexport --db=mongo_practica --collection=videojuegos --query '{"rating": {"$gt": 9.0}}' --out=videojuegos_calificacion_alta.json --jsonArray
+mongoexport--db = mongo_practica--collection = videojuegos--query '{"rating": {"$gt": 9.0}}' --out = videojuegos_calificacion_alta.json--jsonArray
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -705,7 +712,7 @@ mongoexport --db=mongo_practica --collection=videojuegos --query '{"rating": {"$
 // 3.Incluye comentarios en cada consulta explicando su propósito.
 // 4.Crea una función en JavaScript que permita buscar videojuegos según condiciones específicas pasadas como parámetro.
 // Función para buscar videojuegos según condiciones específicas
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
 
 const URL = "mongodb://root:example@localhost:27017/?appName=MongoDB+Compass&directConnection=true&serverSelectionTimeoutMS=2000"
 const dbName = "mongo_practica"
@@ -726,7 +733,7 @@ async function buscarVideojuegos(conditions) {
 
     } catch (error) {
         console.error(error);
-    }finally{
+    } finally {
         await client.close();
     }
 
@@ -740,7 +747,7 @@ videojuegos.then(v => {
     console.log(v)
 });
 // 5.Extiende la función para incluir un parámetro opcional que ordene los resultados.
-async function buscarVideojuegosOrdenados(conditions, sort={}) {
+async function buscarVideojuegosOrdenados(conditions, sort = {}) {
     const client = new MongoClient(URL);
 
     try {
@@ -756,22 +763,22 @@ async function buscarVideojuegosOrdenados(conditions, sort={}) {
 
     } catch (error) {
         console.error(error);
-    }finally{
+    } finally {
         await client.close();
     }
 
 }
 
 const videojuegosOrdenados = buscarVideojuegosOrdenados(
-    {rating: { $gt: 9.0 }},
-    {rating:-1}
+    { rating: { $gt: 9.0 } },
+    { rating: -1 }
 );
 
 videojuegosOrdenados.then(v => {
     console.log(v)
 });
 // 6.Agrega un límite de resultados en la función para devolver solo los primeros `n` documentos encontrados.
-async function buscarVideojuegosOrdenadosLimit(conditions, sort={}, l=1) {
+async function buscarVideojuegosOrdenadosLimit(conditions, sort = {}, l = 1) {
     const client = new MongoClient(URL);
 
     try {
@@ -787,13 +794,13 @@ async function buscarVideojuegosOrdenadosLimit(conditions, sort={}, l=1) {
 
     } catch (error) {
         console.error(error);
-    }finally{
+    } finally {
         await client.close();
     }
 }
 const videojuegosOrdenadosLimit = buscarVideojuegosOrdenadosLimit(
-    {rating: { $gt: 9.0 }},
-    {rating:-1},
+    { rating: { $gt: 9.0 } },
+    { rating: -1 },
     2
 );
 

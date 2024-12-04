@@ -1,6 +1,4 @@
 // Problema 1: inserción
-// crear coleccion series
-db.createCollection('series')
 // Inserta los siguientes documentos en la colección videojuegos
 db.createCollection('videojuegos')
 db.videojuegos.insertMany([{
@@ -407,41 +405,78 @@ db.videojuegos.aggregate([
 ])
 // 4.Supón que cada videojuego se vende 1,000 veces. Calcula el ingreso total por plataforma.
 db.videojuegos.aggregate([
-    { $unwind: "$platform" },
-    { $group: { _id: "$platform", totalIngresos: { $sum: { $multiply: ["$rating", 1000] } } } },
-    { $sort: { totalIngresos: -1 } }
+  { $unwind: "$platform" },
+  { $group: {
+          _id: "$platform",
+          totalIncome: { $sum: { $multiply: [1000, 25] } } // doy un precio de 25 por juego
+      }
+  },
+  { $sort: { totalIncome: -1 } }
 ])
 // 5.Encuentra la plataforma que genera los mayores ingresos.
 db.videojuegos.aggregate([
     { $unwind: "$platform" },
-    { $group: { _id: "$platform", totalIngresos: { $sum: { $multiply: ["$rating", 1000] } } } },
+    { $group: { _id: "$platform", totalIngresos: { $sum: { $multiply: [1000, 25] } } } },
     { $sort: { totalIngresos: -1 } },
     { $limit: 1 }
-])// 6.Calcula también el promedio de ingresos por plataforma.
+])
+// 6.Calcula también el promedio de ingresos por plataforma.
 db.videojuegos.aggregate([
     { $unwind: "$platform" },
-    { $group: { _id: "$platform", avgIngresos: { $avg: { $multiply: ["$rating", 1000] } } } },
+    { $group: { _id: "$platform", avgIngresos: { $avg: { $multiply: [1000, 25] } } } },
     { $sort: { avgIngresos: -1 } }
 ])
 // 7.Combina las colecciones `videojuegos` y `users` para encontrar los nombres de usuarios que compraron juegos de género 'RPG'.
-db.videojuegos.aggregate([
-    { $match: { genre: "RPG" } },
-    { $lookup: { from: "users", localField: "username", foreignField: "username", as: "user_info" } },
-    { $unwind: "$user_info" },
-    { $project: { _id: 0, username: "$user_info.username" } }
+db.users.aggregate([
+  { $lookup: {
+      from: "videojuegos",
+      localField: "purchases.title",
+      foreignField: "title",
+      as: "purchasedGames"
+    }
+  },
+  { $unwind: "$purchasedGames" },
+  { $match: { "purchasedGames.genre": "RPG" } },
+  { $project: {
+      username: 1,
+      "purchasedGames.title": 1,
+      _id: 0
+    }
+  }
 ])
 // 8.Encuentra también los usuarios que compraron videojuegos con calificación mayor a 9.0.
-db.videojuegos.aggregate([
-    { $match: { rating: { $gt: 9 } } },
-    { $lookup: { from: "users", localField: "username", foreignField: "username", as: "user_info" } },
-    { $unwind: "$user_info" },
-    { $project: { _id: 0, username: "$user_info.username" } }
+db.users.aggregate([
+  { $lookup: {
+      from: "videojuegos",
+      localField: "purchases.title",
+      foreignField: "title",
+      as: "purchasedGames"
+    }
+  },
+  { $unwind: "$purchasedGames" },
+  { $match: { "purchasedGames.rating": { $gt:9 } } },
+  { $project: {
+      username: 1,
+      "purchasedGames.title": 1,
+      _id: 0
+    }
+  }
 ])
 // 9.Genera un listado de usuarios con los títulos de los videojuegos que han comprado.
-db.videojuegos.aggregate([
-    { $lookup: { from: "users", localField: "username", foreignField: "username", as: "user_info" } },
-    { $unwind: "$user_info" },
-    { $project: { _id: 0, username: "$user_info.username", title: "$title" } }
+db.users.aggregate([
+  { $lookup: {
+      from: "videojuegos",
+      localField: "purchases.title",
+      foreignField: "title",
+      as: "purchasedGames"
+    }
+  },
+  { $project: {
+      username: 1,
+      "purchasedGames.title": 1,
+      _id: 0
+    }
+  }
 ])
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
@@ -479,7 +514,7 @@ db.videojuegos.find({ genre: "Adventure", rating: { $gt: 9 } }).explain("executi
 // 1.Inserta una nueva compra para un usuario existente.
 db.users.updateOne(
     { username:"TechGuru99" },
-    { $push: { purchases: { title:"Minecraft", date:new Date(), price:25.66 } } }
+    { $push: { purchases: { title:"Minecraft", date:new Date()} } }
 )
 // 2.Encuentra todos los usuarios que han realizado compras.
 db.users.find(
@@ -488,7 +523,7 @@ db.users.find(
 // 3.Actualiza el historial de compras de un usuario para incluir un nuevo videojuego.
 db.users.updateOne(
     { username: "SuperCoder123" },
-    { $push: { purchases: { title:"Super Mario Odyssey", date:new Date(), price:59.99 } } }
+    { $push: { purchases: { title:"Super Mario Odyssey", date:new Date()} } }
 )
 // 4.Inserta más comentarios relacionados con los posts de los usuarios.
 db.comments.insertMany([
@@ -617,7 +652,7 @@ db.videojuegos.aggregate([
     }
 ])
 // 2.Añade también el campo de género con el número de plataformas promedio por género.
-db.series.aggregate([
+db.videojuegos.aggregate([
     { 
       $unwind: "$genre" 
     },
@@ -636,7 +671,7 @@ db.series.aggregate([
     }
   ])  
 // 3.Encuentra los géneros que tienen más de cinco videojuegos y persiste solo esos resultados.
-db.series.aggregate([
+db.videojuegos.aggregate([
     { 
       $unwind: "$genre"
     },
@@ -656,8 +691,11 @@ db.series.aggregate([
     }
 ])  
 // 4.Exporta la colección `users` en formato JSON.
+mongoexport --db=mongo_practica --collection=users --out=users_export.json --jsonArray
 // 5.Exporta también la colección `videojuegos` en formato JSON.
+mongoexport --db=mongo_practica --collection=videojuegos --out=users_export.json --jsonArray
 // 6.Genera un archivo JSON con los videojuegos que tienen calificación superior a 9.0.
+mongoexport --db=mongo_practica --collection=videojuegos --query '{"rating": {"$gt": 9.0}}' --out=videojuegos_calificacion_alta.json --jsonArray
 
 //----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -669,11 +707,11 @@ db.series.aggregate([
 // Función para buscar videojuegos según condiciones específicas
 const {MongoClient} = require('mongodb');
 
-const url = "mongodb://root:example@localhost:27017/?appName=MongoDB+Compass&directConnection=true&serverSelectionTimeoutMS=2000"
+const URL = "mongodb://root:example@localhost:27017/?appName=MongoDB+Compass&directConnection=true&serverSelectionTimeoutMS=2000"
 const dbName = "mongo_practica"
 
 async function buscarVideojuegos(conditions) {
-    const client = new MongoClient(url);
+    const client = new MongoClient(URL);
 
     try {
         await client.connect();
@@ -703,7 +741,7 @@ videojuegos.then(v => {
 });
 // 5.Extiende la función para incluir un parámetro opcional que ordene los resultados.
 async function buscarVideojuegosOrdenados(conditions, sort={}) {
-    const client = new MongoClient(url);
+    const client = new MongoClient(URL);
 
     try {
         await client.connect();
@@ -734,7 +772,7 @@ videojuegosOrdenados.then(v => {
 });
 // 6.Agrega un límite de resultados en la función para devolver solo los primeros `n` documentos encontrados.
 async function buscarVideojuegosOrdenadosLimit(conditions, sort={}, l=1) {
-    const client = new MongoClient(url);
+    const client = new MongoClient(URL);
 
     try {
         await client.connect();
